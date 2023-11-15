@@ -1,0 +1,324 @@
+---
+title: "Final exam: mortality dataset"
+format: html
+editor: visual
+author: "Abdel-Hamid MAKARIMI"
+date: "2023-11-15"
+---
+
+## Getting the data
+
+This dataset -- imported from **Our World in Data** -- contains data about the share of deaths attributable to each of several causes of death in several countries from 1990.
+
+This first chunk imports the data (in an object called `df`) and the `tidyverse` library. Add other library calls here if you use other libraries in your work.
+
+```{r setup, message=FALSE}
+library(tidyverse)
+df <- read_csv("df_mortality.csv")
+```
+
+## Recap: exam rules
+
+You have **two hours.**
+
+At the end of the 2 hours, send the `.qmd` file **adding your name to the file** either via gitlab push or via email at [paolo.crosetto\@gmail.com](mailto:paolo.crosetto@gmail.com) or [paolo.crosetto\@inrae.fr](mailto:mailto:paolo.crosetto@inrae.fr).
+
+**Two** basic points are awarded if the `.qdm` properly compiles on my machine (once all the proper libraries are installed).
+
+You will have to answer **4 questions** on the data. They are of *increasing difficulty* and mobilize the tools we used in the course. The questions give **3**, **4**, **5** and **6** points respectively (total = **18**, plus the 2 basic point, **20**).
+
+Some other rules/hints
+
+-   feel free to answer in any order you want but please do not change the structure of this `.qmd`.
+-   feel free to add other code chunks if you need them
+-   please do explain what you are doing in the text bits, to expose your reasoning behind the data manipulation
+
+## Good luck!
+
+## Question 1 (3 points)
+
+Concentrez vous sur les cancers. Y a-t-il une différence de dynamique dans le taux de mortalité pour cancer entre les USA, la France, la Chine, l'Inde, le Japon et le Nigéria?
+
+Commentez: quels pays a vu la plus forte augmentation? Lequel est le plus stable? Est-ce que la part de morts de cancer décroit quelque part?
+
+```{r q1}
+library(tidyverse)
+
+pays <- c('United States' , 'France' , 'Japan' , 'China' , 'India', 'Nigeria')
+
+df %>% 
+  filter(country %in% pays) %>%
+  select(country, year, `Cancers (%)`) %>% 
+  rename(Cancers = `Cancers (%)`) %>%  # Renommer la colonne
+  ggplot(aes(x = year, y = Cancers, color = country)) +
+  geom_line(size = 1.5) +
+  labs(title = "Dynamique du pourcentage de décès dus aux cancers",
+       x = "Année",
+       y = "Pourcentage de décès dus aux cancers") +
+  theme_minimal()
+  
+```
+
+
+```{r}
+df %>% 
+  filter(country %in% pays) %>%
+  select(country, year, `Cancers (%)`) %>% 
+  rename(Cancers = `Cancers (%)`) %>%
+  group_by(country) %>%  # Groupement par pays
+  summarise(diff_percentage = ((last(Cancers) - first(Cancers)) / first(Cancers)) * 100) %>%
+  ggplot(aes(x = country, y = diff_percentage, fill = country)) +
+  geom_bar(stat = "identity") +
+  labs(title = "Variation du taux de décès par pays",
+       x = "Pays",
+       y = "Différence en pourcentage",
+       fill = "Pays") +
+  theme_minimal() +
+  theme(legend.position = "none", 
+        plot.title = element_text(face = "bold", size = 14, hjust = 0.5),
+        axis.text = element_text(size = 8),
+        axis.title = element_text(face = "bold", size = 10))
+
+```
+Commentaire :
+
+
+  Au fil des années , le pays ayant gardé son taux de décès dû aux cancers plus ou moins stable est les Etats Unis
+
+  Celui ayant une grande augmentation est l'Inde qui a quasi atteint le même nombre que les Etats-Unis
+
+  Et on observe chez La Chine et le Nigeria une rapide augmentation aussi
+
+  Les dynamiques entre les pays ne sont pas les mêmes. Certains connaissent une rapide évolution tandis que d'autre tendent à être stable et les derniers connaissent même des diminutions ( Japon et France)
+
+
+## Question 2 (4 points)
+
+Plottez la dynamique depuis 1990 de toutes les causes de mort qui comptent pour plus de 3% des morts en France et en Espagne.
+
+Commentez: combien de causes cela répresente? Quelle est la cause la plus importante? Laquelle montre une croissance plus rapide? Comparez les pays.
+
+```{r q2}
+df %>%
+  filter(country %in% c('France', 'Spain')) %>%
+  group_by(country) %>%
+  rename(
+    Cancers = `Cancers (%)`,
+    Cardiovascular = `Cardiovascular diseases (%)`,
+    Respiratory = `Respiratory diseases (%)`,
+    Diabetes = `Diabetes (%)`,
+    Dementia = `Dementia (%)`
+  ) %>%
+  select_if(~ all(. > 3.00)) %>%
+  ggplot(aes(x = year)) +
+  geom_line(aes(y = Cardiovascular, color = 'Cardiovascular'), size = 1.5) +
+  geom_line(aes(y = Cancers, color = 'Cancers'), size = 1.5) +
+  geom_line(aes(y = Respiratory, color = 'Respiratory'), size = 1.5) +
+  geom_line(aes(y = Diabetes, color = 'Diabetes'), size = 1.5) +
+  geom_line(aes(y = Dementia, color = 'Dementia'), size = 1.5) +
+  labs(
+    title = "Dynamique du pourcentage de décès",
+    subtitle = "Pourcentage de décès dus à différentes causes",
+    x = "Année",
+    y = "Pourcentage de décès",
+    color = "Cause de décès"
+  ) +
+  theme_minimal() +
+  facet_wrap(~country, scales = "free_y") +
+  theme(
+    legend.position = "top",
+    legend.title = element_blank(),
+    panel.grid.minor = element_blank(),
+    panel.grid.major.y = element_line(color = "gray", linetype = "dashed"),
+    strip.background = element_blank(),
+    strip.text = element_text(size = 11, face = "bold")
+  )
+
+  
+```
+
+Commentaire : 
+combien de causes cela répresente? :
+Cela représente 5 causes 
+
+
+Quelle est la cause la plus importante? : 
+- la cause la plus importante en France est tout d'abord Les maladies cardiovasculaires dans les années avant 2000 avant que ca ne soit le cancer récemment
+- en Espagne la cause la plus importante reste les maladies Cardiovasculaires
+
+
+Laquelle montre une croissance plus rapide? Comparez les pays.
+En france : Demence
+En Espagne : Demence
+
+
+## Question 3 (5 points)
+
+Un extraterrestre arrive sur terre et veut savoir, sans avoir accès à autre chose que ces données, dans quels pays on a combattu des guerres et quand.
+
+-   Pouvez-vous l'aider à identifier les 10 pays les plus touchés?
+
+-   Parmi ces pays, sur quelles années il y a eu plus de conflit?
+
+```{r q3}
+# Sélection des 10 pays les plus touchés
+top_countries <- df %>%
+  group_by(country) %>%
+  summarise(total_percentage_conflicts_deaths = sum(`Conflict (%)`,na.rm=T)) %>%
+  arrange(desc(total_percentage_conflicts_deaths)) %>%
+  head(10) 
+top_countries
+```
+```{r}
+
+top_countries %>%
+  ggplot(aes(x = reorder(country, -total_percentage_conflicts_deaths), y = total_percentage_conflicts_deaths, fill = country)) +
+  geom_col() +
+  labs(
+    title = "Les 10 pays les plus touchés par les conflits",
+    x = "Pays",
+    y = "Pourcentage total de décès dus aux conflits",
+    fill = "Pays"
+  ) +
+  theme_minimal() +
+  theme(
+    axis.text.x = element_text(angle = 45, hjust = 1),
+    legend.position = "none",
+    panel.grid.major.y = element_line(color = "gray", linetype = "dashed"),
+    plot.title = element_text(hjust = 0.5)
+  )
+
+```
+
+
+```{r}
+
+# Sélectionnez les 10 pays les plus touchés
+top_countries <- df %>%
+  group_by(country) %>%
+  summarise(total_percentage_deaths = sum(`Conflict (%)`)) %>%
+  arrange(desc(total_percentage_deaths)) %>%
+  head(10)
+
+conflict_years <- df %>%
+  filter(country %in% top_countries$country) %>%
+  group_by(country, year) %>%
+  summarise(total_percentage_deaths = sum(`Conflict (%)`)) %>%
+  arrange(country, desc(total_percentage_deaths)) %>%
+  slice(1)  # Sélectionnez la première année avec le pourcentage le plus élevé
+
+conflict_years
+
+```
+
+Années avec le plus de conflits : 2016 - 1997 -1995 - 1990 - 1994 - 1991 - 1992
+
+
+## Question 4 (6 points)
+
+Quelles étaient les **trois** primaires cause de mort par continent en 1990?
+
+*Note: pour répondre il vous faut la variable "continent". La coder à la main, c'est très long. Mais on a utilisé un jeu de données qui contenait cette variables pendant les cours...*
+
+```{r q4}
+data <- gapminder[, 1:2]
+
+df_2 <- inner_join(data, df, by = "country")
+
+```
+
+```{r}
+df_2 <- df_2 %>% 
+  distinct(country, .keep_all = TRUE) %>% 
+  filter(year==1990) %>% 
+  group_by(continent) %>% 
+  rename(Cancers = `Cancers (%)`,
+    Cardiovascular = `Cardiovascular diseases (%)`,
+    Respiratory = `Respiratory diseases (%)`,
+    Diabetes = `Diabetes (%)`,
+    Dementia = `Dementia (%)`,
+    Lower_Respi = `Lower respiratory infections (%)`,
+    Neonatal = `Neonatal deaths (%)`, 
+    Diarrheal = `Diarrheal diseases (%)`,
+    Road = `Road accidents (%)`,
+    Liver = `Liver disease (%)`,
+    Tuberculosis = `Tuberculosis (%)`,
+    Kidney = `Kidney disease (%)`,
+    Digestive = `Digestive diseases (%)`,
+    HiV = `HIV/AIDS (%)`,
+    Suicide = `Suicide (%)`,
+    Malaria = `Malaria (%)`,
+    Homicide = `Homicide (%)`, 
+    Nutritional = `Nutritional deficiencies (%)`,
+    Meningitis = `Meningitis (%)`, 
+    Protein_malnutrition = `Protein-energy malnutrition (%)`,
+    Drowning = `Drowning (%)`,
+    Maternetl_deaths = `Maternal deaths (%)`, 
+    Parkinson = `Parkinson disease (%)`,
+    alcolhol = `Alcohol disorders (%)`,
+    intestinal_infection = `Intestinal infectious diseases (%)`,
+    durg_disorders= `Drug disorders (%)`,
+    hepatitis = `Hepatitis (%)`,
+    fire = `Fire (%)`,
+    heat_related = `Heat-related (hot and cold exposure) (%)`,
+    natural_disasters = `Natural disasters (%)`,
+    conflict =`Conflict (%)`,
+    terrorism = `Terrorism (%)`)
+    
+
+```
+
+```{r}
+
+# Filtrer les données pour l'année 1990
+df_1990 <- df_2 %>% filter(year == 1990)
+
+# Rassembler les données en format long
+df_long <- df_1990 %>%
+  select(country, continent, Cancers, Cardiovascular, Respiratory, Diabetes, Dementia, Lower_Respi,
+         Neonatal, Diarrheal, Road, Liver, Tuberculosis, Kidney, Digestive, HiV, Suicide, Malaria,
+         Homicide, Nutritional, Meningitis, Protein_malnutrition, Drowning, Maternetl_deaths,
+         Parkinson, alcolhol, intestinal_infection, durg_disorders, hepatitis, fire,
+         heat_related, natural_disasters, conflict, terrorism) %>%
+  pivot_longer(
+    cols = c(Cancers, Cardiovascular, Respiratory, Diabetes, Dementia, Lower_Respi,
+             Neonatal, Diarrheal, Road, Liver, Tuberculosis, Kidney, Digestive, HiV, Suicide, Malaria,
+             Homicide, Nutritional, Meningitis, Protein_malnutrition, Drowning, Maternetl_deaths,
+             Parkinson, alcolhol, intestinal_infection, durg_disorders, hepatitis, fire,
+             heat_related, natural_disasters, conflict, terrorism),
+    names_to = "cause_of_death",
+    values_to = "percentage_deaths"
+  )
+
+
+# Grouper par continent et cause de décès, puis calculer la somme des pourcentages
+top_causes <- df_long %>%
+  group_by(continent, cause_of_death) %>%
+  summarise(total_percentage_deaths = sum(percentage_deaths)) %>%
+  arrange(continent, desc(total_percentage_deaths)) %>%
+  group_by(continent) %>%
+  slice_head(n = 3)
+
+print(top_causes)
+
+
+```
+
+Africa : Cardiovascular, Lower respiratory Infections, Diarrheal
+Americas : Cardiocascular, Cancers, Lower respiratory Infections 
+Asia : Cardiovascular , Cancers, neonatal 
+Europe : Cardiovascular, Cancers, Dementia
+Oceania : Cardiovascular, Cancers, Respiratory
+
+
+
+
+
+
+
+
+
+
+
+
+
